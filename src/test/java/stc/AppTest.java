@@ -6,6 +6,8 @@ import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -24,12 +26,21 @@ public class AppTest {
         private String stringField = "as good as any other non-primitive type";
     }
 
+    private Set<String> hCleanup;
+    private Set<String> hOutput;
+    private HashMap<String, String> testMap;
+
     private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
     private final PrintStream originalOut = System.out;
 
     @Before
     public void setUp() {
         System.setOut(new PrintStream(outContent));
+
+        hCleanup = new HashSet<>();
+        hOutput = new HashSet<>();
+
+        testMap = new HashMap<>();
     }
 
     @After
@@ -48,17 +59,22 @@ public class AppTest {
     // testing throwing exceptions
     @Test(expected = IllegalArgumentException.class)
     public void throwExceptionOnNonexistentCleanupField() throws IllegalArgumentException {
-        Set<String> hCleanup = new HashSet<>();
         hCleanup.add("width");
         App.cleanup("String, for example", hCleanup, new HashSet<String>());
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void throwExceptionOnNonexistentOutputField() throws IllegalArgumentException {
-        Set<String> hOutput = new HashSet<>();
         hOutput.add("height");
         App.cleanup("String, for example", new HashSet<String>(), hOutput);
     }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void throwExceptionOnNonexistentKey() throws IllegalArgumentException {
+        hCleanup.add("width");
+        App.cleanup(testMap, hCleanup, new HashSet<String>());
+    }
+
     /* -------------------- */
 
     // testing cleanup
@@ -72,7 +88,6 @@ public class AppTest {
         assertEquals(nodeValue, testSubject.getValue());
         assertEquals(nextNode, testSubject.next);
 
-        Set<String> hCleanup = new HashSet<>();
         hCleanup.add("value");
         hCleanup.add("next");
         App.cleanup(testSubject, hCleanup, new HashSet<String>());
@@ -85,7 +100,7 @@ public class AppTest {
     public void testCleanupForAllTypes() {
         superClass someObject = new superClass();
 
-        HashSet<String> hCleanup = new HashSet<String>() {{
+        hCleanup.addAll(new ArrayList<String>() {{
             add("booleanField");
             add("charField");
             add("byteField");
@@ -95,7 +110,7 @@ public class AppTest {
             add("floatField");
             add("doubleField");
             add("stringField");
-        }};
+        }});
 
         App.cleanup(someObject, hCleanup, new HashSet<String>());
 
@@ -109,6 +124,21 @@ public class AppTest {
         assertEquals(0d, someObject.doubleField, 0.0001d);
         assertNull(someObject.stringField);
     }
+
+    @Test
+    public void testCleanupOnMap() {
+        String firstKey = "firstKey", firstValue = "firstValue";
+        String secondKey = "secondKey", secondValue = "secondValue";
+        testMap.put(firstKey, firstValue);
+        testMap.put(secondKey, secondValue);
+        hCleanup.add(firstKey);
+
+        App.cleanup(testMap, hCleanup, new HashSet<String>());
+
+        assertNull(testMap.get(firstKey));
+        assertEquals(secondValue, testMap.get(secondKey));
+    }
+
     /* -------------------- */
 
     // testing output
@@ -122,7 +152,6 @@ public class AppTest {
         assertEquals(nodeValue, testSubject.getValue());
         assertEquals(nextNode, testSubject.next);
 
-        Set<String> hOutput = new HashSet<>();
         hOutput.add("value");
         hOutput.add("next");
         App.cleanup(testSubject, new HashSet<String>(), hOutput);
@@ -141,7 +170,7 @@ public class AppTest {
     public void testOutputForAllTypes() {
         superClass someObject = new superClass();
 
-        HashSet<String> hOutput = new HashSet<String>() {{
+        hOutput.addAll(new ArrayList<String>() {{
             add("booleanField");
             add("charField");
             add("byteField");
@@ -151,7 +180,7 @@ public class AppTest {
             add("floatField");
             add("doubleField");
             add("stringField");
-        }};
+        }});
 
         App.cleanup(someObject, new HashSet<String>(), hOutput);
 
@@ -166,5 +195,24 @@ public class AppTest {
         assertTrue(output.contains(String.valueOf(someObject.floatField)));
         assertTrue(output.contains(String.valueOf(someObject.stringField)));
     }
+
+    @Test
+    public void testOutputOnMap() {
+        String firstKey = "firstKey", firstValue = "firstValue";
+        String secondKey = "secondKey", secondValue = "secondValue";
+        testMap.put(firstKey, firstValue);
+        testMap.put(secondKey, secondValue);
+        hOutput.add(firstKey);
+
+        App.cleanup(testMap, new HashSet<String>(), hOutput);
+
+        assertEquals(firstValue, testMap.get(firstKey)); // shouldn't change anything
+        assertEquals(secondValue, testMap.get(secondKey));
+
+        String output = outContent.toString();
+        assertTrue(output.contains(firstValue));
+        assertFalse(output.contains(secondValue));
+    }
+
     /* -------------------- */
 }
