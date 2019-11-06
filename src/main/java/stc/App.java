@@ -7,35 +7,15 @@ import java.util.Set;
 
 public class App {
     public static void main(String[] args) {
-        class Node {
-            private String key;
-            private int value;
-            private Node next;
-
-            private Node(String key, int value, Node next) {
-                this.key = key;
-                this.value = value;
-                this.next = next;
-            }
-
-            public String getKey() {
-                return this.key;
-            }
-
-            public int getValue() {
-                return this.value;
-            }
-        }
-
         String nodeKey = "some_key";
         int nodeValue = 42;
         Node nextNode = new Node("irrelevant_key", 427, null);
         Node testSubject = new Node(nodeKey, nodeValue, nextNode);
-        Set<String> hCleanup = new HashSet<>();
-        hCleanup.add("value");
-        hCleanup.add("next");
+        Set<String> hOutput = new HashSet<>();
+        hOutput.add("value");
+        hOutput.add("next");
 
-        cleanup(testSubject, hCleanup, new HashSet<String>());
+        cleanup(testSubject, new HashSet<String>(), hOutput);
     }
 
     /**
@@ -43,9 +23,9 @@ public class App {
      * - изменять значения в полях по списку fieldsToCleanup
      *   - изменять значения полей примитивных типов на значения по умолчанию
      *   - изменять на null значения полей других типов
-     * TODO - выводить значения в полях по списку fieldsToOutput
-     * TODO   - выводить String.valueOf для полей примитивных типов
-     * TODO   - выводить toString для полей других типов
+     * - выводить значения в полях по списку fieldsToOutput
+     *   - выводить String.valueOf для полей примитивных типов
+     *   - выводить toString для полей других типов
      * TODO - если объект является реализацией интерфейса Map, то проделать аналогичные операции
      * TODO   - для списка fieldsToCleanup удалить ключи из мапы
      * TODO   - для fieldsToOutput вывести в консоль значения, хранящиеся в мапе
@@ -56,11 +36,10 @@ public class App {
 
         try {
             cleanupObject(object, fieldsToCleanup);
+            outputFields(object, fieldsToOutput);
         } catch (IllegalAccessException e) {
             e.printStackTrace();
         }
-
-        System.out.println("Hello, World!");
     }
 
     private static void checkIfObjectHasAllFields(Object object, Set<String> fieldSet) throws IllegalArgumentException {
@@ -74,13 +53,12 @@ public class App {
         }
     }
 
-    private static void cleanupObject(Object object, Set<String> fieldToClean) throws IllegalAccessException {
+    private static void cleanupObject(Object object, Set<String> fieldsToClean) throws IllegalAccessException {
         Class clazz = object.getClass();
         Field[] fields = clazz.getDeclaredFields();
 
         for (Field field : fields) {
-
-            if (fieldToClean.contains(field.getName())) {
+            if (fieldsToClean.contains(field.getName())) {
                 if (Modifier.isPrivate(field.getModifiers()))
                     field.setAccessible(true);
 
@@ -100,6 +78,26 @@ public class App {
             case "float": field.setFloat(object, 0f); break;
             case "double": field.setDouble(object, 0d); break;
             default: field.set(object, null); break;
+        }
+    }
+
+    /**
+     * why should i use .toString() for non-primitive types
+     * when function String.valueOf() itself calls .toString()
+     * if argument is of non-primitive type?
+     * @see java.lang.String#valueOf(Object obj)
+     */
+    private static void outputFields(Object object, Set<String> fieldsToOutput) throws IllegalAccessException {
+        Class clazz = object.getClass();
+        Field[] fields = clazz.getDeclaredFields();
+
+        for (Field field : fields) {
+            if (fieldsToOutput.contains(field.getName())) {
+                if (Modifier.isPrivate(field.getModifiers()))
+                    field.setAccessible(true);
+
+                System.out.println(String.valueOf(field.get(object)));
+            }
         }
     }
 }
